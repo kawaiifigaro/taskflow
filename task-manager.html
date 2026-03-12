@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskFlow</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f13;
+    --surface: #1a1a24;
+    --surface2: #22223a;
+    --accent: #7c6af7;
+    --accent2: #f7a26a;
+    --accent3: #6af7c2;
+    --text: #e8e8f0;
+    --muted: #7070a0;
+    --danger: #f76a6a;
+    --border: rgba(124,106,247,0.18);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Noto Sans JP', sans-serif; min-height: 100vh; }
+  body::before {
+    content: ''; position: fixed; top: -40%; left: -20%;
+    width: 80vw; height: 80vw;
+    background: radial-gradient(circle, rgba(124,106,247,0.10) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+  body::after {
+    content: ''; position: fixed; bottom: -30%; right: -10%;
+    width: 60vw; height: 60vw;
+    background: radial-gradient(circle, rgba(247,162,106,0.07) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+  .container { max-width: 780px; margin: 0 auto; padding: 48px 20px 80px; position: relative; z-index: 1; }
+  header { margin-bottom: 40px; display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  .logo {
+    font-family: 'DM Serif Display', serif; font-size: 2.4rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -1px;
+  }
+  .date-badge { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 6px 16px; font-size: 0.82rem; color: var(--muted); }
+
+  .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 32px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; text-align: center; transition: border-color 0.2s; }
+  .stat:hover { border-color: var(--accent); }
+  .stat-num { font-size: 2rem; font-weight: 700; color: var(--accent); line-height: 1; margin-bottom: 4px; }
+  .stat-num.done { color: var(--accent3); }
+  .stat-num.pending { color: var(--accent2); }
+  .stat-label { font-size: 0.75rem; color: var(--muted); }
+
+  .add-form { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 24px; margin-bottom: 28px; transition: border-color 0.3s; }
+  .add-form:focus-within { border-color: var(--accent); }
+  .form-title { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 14px; }
+  .form-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  input[type="text"], input[type="date"], input[type="time"], input[type="number"], select, textarea {
+    background: var(--surface2); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px; color: var(--text); padding: 10px 14px;
+    font-family: 'Noto Sans JP', sans-serif; font-size: 0.9rem; outline: none; transition: border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  input[type="text"] { flex: 1; min-width: 200px; }
+  input[type="date"] { flex: 1; min-width: 140px; color-scheme: dark; }
+  input[type="time"] { flex: 1; min-width: 110px; color-scheme: dark; }
+  input[type="number"] { width: 75px; text-align: center; }
+  select { flex: 1; min-width: 120px; cursor: pointer; }
+  select option { background: var(--surface2); }
+  textarea { resize: vertical; width: 100%; min-height: 64px; }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #5b4fd4); color: white; border: none;
+    border-radius: 10px; padding: 10px 24px; font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: opacity 0.2s, transform 0.1s; white-space: nowrap;
+  }
+  .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-secondary {
+    background: var(--surface2); color: var(--muted); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 24px; font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.9rem; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .btn-secondary:hover { border-color: var(--danger); color: var(--danger); }
+
+  .alert-section { background: var(--surface); border: 1px solid rgba(124,106,247,0.25); border-radius: 20px; padding: 24px; margin-bottom: 28px; }
+  .section-title { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 16px; }
+  .alert-type-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .alert-type-btn {
+    background: var(--surface2); border: 1.5px solid rgba(255,255,255,0.07); border-radius: 10px;
+    color: var(--muted); padding: 8px 16px; font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.85rem; cursor: pointer; transition: all 0.2s; flex: 1; min-width: 100px; text-align: center;
+  }
+  .alert-type-btn.selected { border-color: var(--accent); color: var(--text); background: rgba(124,106,247,0.12); }
+  .alert-type-btn:hover { border-color: var(--accent); color: var(--text); }
+  .alert-mins-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; font-size: 0.88rem; }
+  .alert-status { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--muted); margin-bottom: 14px; }
+  .alert-status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; transition: all 0.3s; }
+  .alert-status.active .dot { background: var(--accent3); box-shadow: 0 0 6px var(--accent3); animation: pulse 1.5s infinite; }
+  .alert-status.active { color: var(--accent3); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .alert-btn-row { display: flex; gap: 10px; }
+
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+  .filter-btn {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+    color: var(--muted); padding: 6px 16px; font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.8rem; cursor: pointer; transition: all 0.2s;
+  }
+  .filter-btn.active, .filter-btn:hover { background: var(--accent); border-color: var(--accent); color: white; }
+  .filter-spacer { flex: 1; }
+  .sort-select {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+    color: var(--muted); padding: 6px 14px; font-family: 'Noto Sans JP', sans-serif; font-size: 0.78rem; cursor: pointer;
+  }
+
+  .task-list { display: flex; flex-direction: column; gap: 10px; }
+  .task-item {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 16px 18px; display: flex; align-items: flex-start; gap: 14px;
+    transition: all 0.25s; animation: slideIn 0.3s ease; position: relative; overflow: hidden;
+  }
+  @keyframes slideIn { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+  .task-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 3px 0 0 3px; }
+  .task-item.prio-high::before { background: var(--danger); }
+  .task-item.prio-medium::before { background: var(--accent2); }
+  .task-item.prio-low::before { background: var(--accent3); }
+  .task-item:hover { border-color: rgba(124,106,247,0.35); transform: translateX(2px); }
+  .task-item.done-item { opacity: 0.45; }
+  .task-check {
+    width: 22px; height: 22px; border: 2px solid var(--muted); border-radius: 7px;
+    cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; font-size: 0.8rem; margin-top: 2px;
+  }
+  .task-check.checked { background: var(--accent3); border-color: var(--accent3); color: #0f0f13; }
+  .task-body { flex: 1; min-width: 0; }
+  .task-name { font-size: 0.95rem; font-weight: 500; margin-bottom: 5px; word-break: break-word; }
+  .task-item.done-item .task-name { text-decoration: line-through; }
+  .task-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 4px; }
+  .tag { font-size: 0.7rem; padding: 2px 9px; border-radius: 10px; font-weight: 500; }
+  .tag-prio-high { background: rgba(247,106,106,0.15); color: var(--danger); }
+  .tag-prio-medium { background: rgba(247,162,106,0.15); color: var(--accent2); }
+  .tag-prio-low { background: rgba(106,247,194,0.15); color: var(--accent3); }
+  .tag-date { font-size: 0.72rem; color: var(--muted); }
+  .tag-date.overdue { color: var(--danger); }
+  .tag-date.today { color: var(--accent2); font-weight: 600; }
+  .task-location { font-size: 0.72rem; color: var(--muted); }
+  .task-memo { font-size: 0.78rem; color: var(--muted); margin-top: 5px; line-height: 1.5; word-break: break-word; }
+  .btn-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1rem; padding: 4px 6px; border-radius: 8px; transition: all 0.2s; flex-shrink: 0; }
+  .btn-del:hover { background: rgba(247,106,106,0.15); color: var(--danger); }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-state .emoji { font-size: 3rem; margin-bottom: 12px; }
+  .empty-state p { font-size: 0.9rem; }
+
+  .toast {
+    position: fixed; bottom: 30px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 30px;
+    padding: 12px 24px; font-size: 0.85rem; color: var(--text);
+    z-index: 100; transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1); white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .alarm-overlay { display: none; position: fixed; inset: 0; background: rgba(10,10,20,0.88); z-index: 200; align-items: center; justify-content: center; }
+  .alarm-overlay.show { display: flex; }
+  .alarm-box {
+    background: var(--surface); border: 2px solid var(--accent); border-radius: 24px;
+    padding: 40px 36px; text-align: center; max-width: 360px; width: 90%;
+    animation: alarmPop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes alarmPop { from{transform:scale(0.7);opacity:0} to{transform:scale(1);opacity:1} }
+  .alarm-emoji { font-size: 3rem; margin-bottom: 12px; }
+  .alarm-heading { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; color: var(--accent); }
+  .alarm-name { font-size: 0.95rem; margin-bottom: 6px; }
+  .alarm-detail { font-size: 0.8rem; color: var(--muted); margin-bottom: 24px; }
+  .btn-alarm-close {
+    background: linear-gradient(135deg, var(--accent), #5b4fd4); color: white; border: none;
+    border-radius: 12px; padding: 12px 32px; font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+  }
+  .btn-alarm-close:hover { opacity: 0.85; }
+
+  @media (max-width: 500px) {
+    .logo { font-size: 1.8rem; }
+    .stat-num { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">TaskFlow</div>
+    <div class="date-badge" id="dateDisplay"></div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num" id="statTotal">0</div><div class="stat-label">総タスク</div></div>
+    <div class="stat"><div class="stat-num done" id="statDone">0</div><div class="stat-label">完了</div></div>
+    <div class="stat"><div class="stat-num pending" id="statPending">0</div><div class="stat-label">未完了</div></div>
+  </div>
+
+  <div class="add-form">
+    <div class="form-title">＋ 新しいタスク</div>
+    <div class="form-row">
+      <input type="text" id="taskInput" placeholder="タスクを入力..." />
+    </div>
+    <div class="form-row">
+      <input type="date" id="dueDateInput" />
+      <input type="time" id="dueTimeInput" />
+      <input type="text" id="locationInput" placeholder="📍 場所（任意）" />
+    </div>
+    <div class="form-row">
+      <textarea id="memoInput" placeholder="📝 メモ（任意）"></textarea>
+    </div>
+    <div class="form-row">
+      <select id="priorityInput">
+        <option value="high">🔴 高優先度</option>
+        <option value="medium" selected>🟠 中優先度</option>
+        <option value="low">🟢 低優先度</option>
+      </select>
+      <button class="btn-primary" onclick="addTask()">追加</button>
+    </div>
+  </div>
+
+  <div class="alert-section">
+    <div class="section-title">🔔 アラート設定</div>
+    <div class="alert-type-row">
+      <button class="alert-type-btn selected" id="btnNotify" onclick="selectAlertType('notify')">🔔 通知</button>
+      <button class="alert-type-btn" id="btnAlarm" onclick="selectAlertType('alarm')">⏰ アラーム音</button>
+      <button class="alert-type-btn" id="btnBoth" onclick="selectAlertType('both')">🔔＋⏰ 両方</button>
+    </div>
+    <div class="alert-mins-row">
+      <span>タスク開始の</span>
+      <input type="number" id="alertMinutes" value="10" min="1" max="120" />
+      <span>分前に通知</span>
+    </div>
+    <div class="alert-status" id="alertStatus">
+      <span class="dot"></span><span>「監視開始」を押すとアラートが有効になります</span>
+    </div>
+    <div class="alert-btn-row">
+      <button class="btn-primary" style="flex:1" onclick="startMonitor()">▶ 監視開始</button>
+      <button class="btn-secondary" style="flex:1" onclick="stopMonitor()">■ 停止</button>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="setFilter('all',this)">すべて</button>
+    <button class="filter-btn" onclick="setFilter('pending',this)">未完了</button>
+    <button class="filter-btn" onclick="setFilter('done',this)">完了済み</button>
+    <button class="filter-btn" onclick="setFilter('today',this)">今日</button>
+    <div class="filter-spacer"></div>
+    <select class="sort-select" onchange="setSortAndRender(this.value)">
+      <option value="created">追加順</option>
+      <option value="due">期限順</option>
+      <option value="priority">優先度順</option>
+    </select>
+  </div>
+
+  <div class="task-list" id="taskList"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="alarm-overlay" id="alarmOverlay">
+  <div class="alarm-box">
+    <div class="alarm-emoji">⏰</div>
+    <div class="alarm-heading" id="alarmHeading">まもなく開始！</div>
+    <div class="alarm-name" id="alarmName"></div>
+    <div class="alarm-detail" id="alarmDetail"></div>
+    <button class="btn-alarm-close" onclick="closeAlarm()">確認しました</button>
+  </div>
+</div>
+
+<script>
+  var tasks = JSON.parse(localStorage.getItem('taskflow_tasks') || '[]');
+  var filter = 'all';
+  var sortBy = 'created';
+  var TODAY = new Date().toISOString().split('T')[0];
+  var alertType = 'notify';
+  var monitorInterval = null;
+  var firedKeys = new Set(JSON.parse(sessionStorage.getItem('firedKeys') || '[]'));
+  var audioCtx = null;
+
+  function saveTasks() { localStorage.setItem('taskflow_tasks', JSON.stringify(tasks)); }
+
+  function addTask() {
+    var name = document.getElementById('taskInput').value.trim();
+    if (!name) { showToast('タスク名を入力してください'); return; }
+    tasks.unshift({
+      id: Date.now(), name,
+      due: document.getElementById('dueDateInput').value,
+      time: document.getElementById('dueTimeInput').value,
+      location: document.getElementById('locationInput').value.trim(),
+      memo: document.getElementById('memoInput').value.trim(),
+      priority: document.getElementById('priorityInput').value,
+      done: false, created: Date.now()
+    });
+    document.getElementById('taskInput').value = '';
+    document.getElementById('locationInput').value = '';
+    document.getElementById('memoInput').value = '';
+    saveTasks(); render();
+    showToast('タスクを追加しました ✓');
+  }
+
+  function toggleDone(id) {
+    var t = tasks.find(function(t){ return t.id === id; });
+    if (t) { t.done = !t.done; saveTasks(); render(); }
+  }
+
+  function deleteTask(id) {
+    tasks = tasks.filter(function(t){ return t.id !== id; });
+    saveTasks(); render(); showToast('タスクを削除しました');
+  }
+
+  function setFilter(f, btn) {
+    filter = f;
+    document.querySelectorAll('.filter-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active'); render();
+  }
+
+  function setSortAndRender(s) { sortBy = s; render(); }
+
+  function getFiltered() {
+    var list = tasks.slice();
+    if (filter === 'pending') list = list.filter(function(t){ return !t.done; });
+    else if (filter === 'done') list = list.filter(function(t){ return t.done; });
+    else if (filter === 'today') list = list.filter(function(t){ return t.due === TODAY; });
+    var prioOrder = { high:0, medium:1, low:2 };
+    if (sortBy === 'priority') list.sort(function(a,b){ return prioOrder[a.priority] - prioOrder[b.priority]; });
+    else if (sortBy === 'due') list.sort(function(a,b){
+      if (!a.due && !b.due) return 0; if (!a.due) return 1; if (!b.due) return -1;
+      return a.due.localeCompare(b.due);
+    });
+    else list.sort(function(a,b){ return b.created - a.created; });
+    return list;
+  }
+
+  function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function render() {
+    var list = getFiltered();
+    var el = document.getElementById('taskList');
+    document.getElementById('statTotal').textContent = tasks.length;
+    document.getElementById('statDone').textContent = tasks.filter(function(t){ return t.done; }).length;
+    document.getElementById('statPending').textContent = tasks.filter(function(t){ return !t.done; }).length;
+    if (list.length === 0) {
+      el.innerHTML = '<div class="empty-state"><div class="emoji">✨</div><p>タスクがありません</p></div>';
+      return;
+    }
+    el.innerHTML = list.map(function(t) {
+      var prioLabel = {high:'高',medium:'中',low:'低'}[t.priority];
+      var prioClass = 'tag-prio-' + t.priority;
+      var dateHtml = '';
+      if (t.due) {
+        var cls = 'tag-date', label = t.due;
+        if (t.due < TODAY && !t.done) { cls += ' overdue'; label = '⚠ ' + label + ' (期限切れ)'; }
+        else if (t.due === TODAY) { cls += ' today'; label = '📅 今日'; }
+        if (t.time) label += ' ' + t.time;
+        dateHtml = '<span class="' + cls + '">' + label + '</span>';
+      }
+      var locHtml = t.location ? '<span class="task-location">📍 ' + esc(t.location) + '</span>' : '';
+      var memoHtml = t.memo ? '<div class="task-memo">📝 ' + esc(t.memo) + '</div>' : '';
+      return '<div class="task-item prio-' + t.priority + (t.done?' done-item':'') + '">' +
+        '<div class="task-check ' + (t.done?'checked':'') + '" onclick="toggleDone(' + t.id + ')">' + (t.done?'✓':'') + '</div>' +
+        '<div class="task-body">' +
+          '<div class="task-name">' + esc(t.name) + '</div>' +
+          '<div class="task-meta"><span class="tag ' + prioClass + '">' + prioLabel + '優先度</span>' + dateHtml + locHtml + '</div>' +
+          memoHtml +
+        '</div>' +
+        '<button class="btn-del" onclick="deleteTask(' + t.id + ')">🗑</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 2500);
+  }
+
+  function selectAlertType(type) {
+    alertType = type;
+    ['notify','alarm','both'].forEach(function(k){
+      var id = 'btn' + k.charAt(0).toUpperCase() + k.slice(1);
+      document.getElementById(id).classList.toggle('selected', k === type);
+    });
+  }
+
+  function playAlarm() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      var freqs = [880, 660, 880, 1100, 880];
+      freqs.forEach(function(freq, i) {
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.frequency.value = freq; osc.type = 'sine';
+        var s = audioCtx.currentTime + i * 0.3;
+        gain.gain.setValueAtTime(0.45, s);
+        gain.gain.exponentialRampToValueAtTime(0.001, s + 0.25);
+        osc.start(s); osc.stop(s + 0.28);
+      });
+    } catch(e) { console.warn('音声エラー:', e); }
+  }
+
+  function checkAlerts() {
+    var mins = parseInt(document.getElementById('alertMinutes').value) || 10;
+    var now = new Date();
+    tasks.forEach(function(t) {
+      if (t.done || !t.due || !t.time) return;
+      var taskTime = new Date(t.due + 'T' + t.time);
+      var diffMins = (taskTime - now) / 60000;
+      if (diffMins >= 0 && diffMins <= mins) {
+        var key = t.id + '-' + t.due + '-' + t.time;
+        if (!firedKeys.has(key)) {
+          firedKeys.add(key);
+          sessionStorage.setItem('firedKeys', JSON.stringify(Array.from(firedKeys)));
+          var minsLeft = Math.ceil(diffMins);
+          var heading = minsLeft <= 1 ? 'まもなく開始！' : minsLeft + '分後に開始！';
+          var detail = [t.due + ' ' + t.time, t.location ? '📍' + t.location : ''].filter(Boolean).join('  ');
+          if ((alertType === 'notify' || alertType === 'both') && Notification.permission === 'granted') {
+            new Notification('TaskFlow: ' + heading, { body: t.name + (detail ? '\n' + detail : '') });
+          }
+          if (alertType === 'alarm' || alertType === 'both') playAlarm();
+          document.getElementById('alarmHeading').textContent = heading;
+          document.getElementById('alarmName').textContent = t.name;
+          document.getElementById('alarmDetail').textContent = detail;
+          document.getElementById('alarmOverlay').classList.add('show');
+        }
+      }
+    });
+  }
+
+  function startMonitor() {
+    if (monitorInterval) clearInterval(monitorInterval);
+    if (alertType !== 'alarm' && Notification.permission === 'default') {
+      Notification.requestPermission().then(function(p){
+        if (p !== 'granted') showToast('通知を使うにはブラウザで許可してください');
+      });
+    }
+    if (alertType !== 'notify') {
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){}
+    }
+    firedKeys.clear();
+    monitorInterval = setInterval(checkAlerts, 30000);
+    checkAlerts();
+    var el = document.getElementById('alertStatus');
+    el.className = 'alert-status active';
+    var m = document.getElementById('alertMinutes').value;
+    el.innerHTML = '<span class="dot"></span><span>監視中 — ' + m + '分前に通知します</span>';
+    showToast('✓ アラート監視を開始しました');
+  }
+
+  function stopMonitor() {
+    if (monitorInterval) { clearInterval(monitorInterval); monitorInterval = null; }
+    var el = document.getElementById('alertStatus');
+    el.className = 'alert-status';
+    el.innerHTML = '<span class="dot"></span><span>停止中</span>';
+    showToast('監視を停止しました');
+  }
+
+  function closeAlarm() { document.getElementById('alarmOverlay').classList.remove('show'); }
+
+  var d = new Date();
+  document.getElementById('dateDisplay').textContent =
+    d.getFullYear() + '年' + (d.getMonth()+1) + '月' + d.getDate() + '日';
+  document.getElementById('taskInput').addEventListener('keydown', function(e){ if (e.key === 'Enter') addTask(); });
+  render();
+</script>
+</body>
+</html>
